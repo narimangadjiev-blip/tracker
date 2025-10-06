@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Трекер привычек</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg: #0b1220;
+      --card: #1a2332;
+      --text: #e8edf4;
+      --muted: #7d8a9a;
+      --border: #2a3648;
+      --good: #4ade80;
+      --bad: #f87171;
+      --primary: #3b82f6;
+    }
+    
+    body {
+      font-family: -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px;
+    }
+    
+    h1 { font-size: 24px; margin-bottom: 16px; }
+    
+    .tabs {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 12px 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    
+    .tab.active {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .tab-icon { font-size: 24px; display: block; margin-bottom: 4px; }
+    .tab-label { font-size: 12px; }
+    
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    
+    main[hidden] { display: none; }
+    
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .card-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+    
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 32px;
+      transition: transform 0.2s;
+    }
+    
+    .btn:hover { transform: scale(1.05); }
+    .btn:active { transform: scale(0.95); }
+    
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .btn-yes { background: var(--good); flex: 1; }
+    .btn-no { background: var(--bad); flex: 1; }
+    .btn-na { background: var(--muted); flex: 1; font-size: 14px; }
+    
+    .habit-card {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      padding: 40px;
+      border-radius: 16px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      min-height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .stats {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    
+    .stat {
+      flex: 1;
+      text-align: center;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 8px;
+    }
+    
+    .stat-value {
+      font-size: 32px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    
+    input, select {
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+    }
+    
+    .form-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .habit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .habit-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 8px;
+    }
+    
+    .habit-name { flex: 1; }
+    
+    .habit-type {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+    
+    .type-good { background: var(--good); color: white; }
+    .type-bad { background: var(--bad); color: white; }
+    
+    .btn-delete {
+      padding: 6px 12px;
+      background: var(--bad);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .done-message {
+      text-align: center;
+      padding: 40px 20px;
+      display: none;
+    }
+    
+    .done-message.show { display: block; }
+    
+    .done-emoji { font-size: 48px; margin-bottom: 16px; }
+    
+    canvas {
+      max-width: 100%;
+      height: auto;
+      margin-top: 16px;
+    }
+    
+    .empty {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎯 Трекер привычек</h1>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('review')">
+        <div class="tab-icon">📋</div>
+        <div class="tab-label">Оценить</div>
+      </div>
+      <div class="tab" onclick="switchTab('stats')">
+        <div class="tab-icon">📊</div>
+        <div class="tab-label">Статистика</div>
+      </div>
+      <div class="tab" onclick="switchTab('settings')">
+        <div class="tab-icon">⚙️</div>
+        <div class="tab-label">Настройки</div>
+      </div>
+    </div>
+  </header>
+
+  <main id="review">
+    <div class="card">
+      <div class="card-title">Оценка дня: <span id="dateLabel"></span></div>
+      <div id="habitContainer"></div>
+      <div id="doneMessage" class="done-message">
+        <div class="done-emoji">✅</div>
+        <h2>День оценён!</h2>
+        <p style="margin-top: 8px; color: var(--muted)">Отличная работа!</p>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">Результаты дня</div>
+      <canvas id="ringChart" width="200" height="200"></canvas>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Всего</div>
+          <div class="stat-value" id="totalCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Успех</div>
+          <div class="stat-value" style="color: var(--good)" id="goodCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Провал</div>
+          <div class="stat-value" style="color: var(--bad)" id="badCount">0</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <main id="stats" hidden>
+    <div class="card">
+      <div class="card-title">📊 Статистика за 7 дней</div>
+      <canvas id="weekChart" width="600" height="300"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">🔥 Общая статистика</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Дней оценено</div>
+          <div class="stat-value" id="daysCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Средний балл</div>
+          <div class="stat-value" style="color: var(--good)" id="avgScore">0%</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <main id="settings" hidden>
+    <div class="card">
+      <div class="card-title">Список привычек</div>
+      <div class="form-row">
+        <input id="habitName" type="text" placeholder="Название привычки" style="flex: 2">
+        <select id="habitType" style="flex: 1">
+          <option value="good">Хорошая</option>
+          <option value="bad">Плохая</option>
+        </select>
+        <button class="btn" style="background: var(--primary); font-size: 14px; padding: 10px 16px;" onclick="addHabit()">+ Добавить</button>
+      </div>
+      <div id="habitList" class="habit-list"></div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">Резервное копирование</div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" style="background: var(--primary); font-size: 14px; padding: 10px 16px; flex: 1;" onclick="exportData()">📤 Экспорт</button>
+        <button class="btn" style="background: var(--primary); font-size: 14px; padding: 10px 16px; flex: 1;" onclick="importData()">📥 Импорт</button>
+        <input type="file" id="importFile" accept=".json" style="display: none" onchange="handleImport(event)">
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Хранилище
+    const storage = {
+      habits: [],
+      reviews: {}
+    };
+
+    // Загрузка данных
+    function loadData() {
+      const saved = localStorage.getItem('habitTracker');
+      if (saved) {
+        const data = JSON.parse(saved);
+        storage.habits = data.habits || [];
+        storage.reviews = data.reviews || {};
+      }
+      if (storage.habits.length === 0) {
+        storage.habits = [
+          { id: Date.now(), name: 'Утренняя зарядка', type: 'good' },
+          { id: Date.now() + 1, name: 'Прочитать 20 страниц', type: 'good' },
+          { id: Date.now() + 2, name: 'Медитация 10 мин', type: 'good' }
+        ];
+        saveData();
+      }
+    }
+
+    // Сохранение данных
+    function saveData() {
+      localStorage.setItem('habitTracker', JSON.stringify(storage));
+    }
+
+    // Получение вчерашней даты
+    function getYesterday() {
+      const date = new Date();
+      date.setDate(date.getDate() - 1);
+      return date.toISOString().split('T')[0];
+    }
+
+    // Переключение табов
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('main').forEach(m => m.hidden = true);
+      
+      event.target.closest('.tab').classList.add('active');
+      document.getElementById(tab).hidden = false;
+      
+      if (tab === 'review') renderReview();
+      if (tab === 'stats') renderStats();
+      if (tab === 'settings') renderSettings();
+    }
+
+    // Рендер оценки
+    let currentHabitIndex = 0;
+    const reviewDate = getYesterday();
+
+    function renderReview() {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      document.getElementById('dateLabel').textContent = yesterday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      
+      if (!storage.reviews[reviewDate]) {
+        storage.reviews[reviewDate] = {};
+      }
+      
+      const unevaluated = storage.habits.filter(h => !storage.reviews[reviewDate].hasOwnProperty(h.id));
+      
+      if (unevaluated.length === 0) {
+        document.getElementById('habitContainer').innerHTML = '';
+        document.getElementById('doneMessage').classList.add('show');
+      } else {
+        document.getElementById('doneMessage').classList.remove('show');
+        const habit = unevaluated[0];
+        document.getElementById('habitContainer').innerHTML = `
+          <div class="habit-card" style="background: linear-gradient(135deg, ${habit.type === 'good' ? '#667eea, #764ba2' : '#f093fb, #f5576c'})">${habit.name}</div>
+          <div class="actions">
+            <button class="btn btn-no" onclick="recordAnswer(${habit.id}, 'no')">✖️</button>
+            <button class="btn btn-na" onclick="recordAnswer(${habit.id}, 'na')">N/A</button>
+            <button class="btn btn-yes" onclick="recordAnswer(${habit.id}, 'yes')">✔️</button>
+          </div>
+        `;
+      }
+      
+      updateDayStats();
+    }
+
+    // Запись ответа
+    function recordAnswer(habitId, answer) {
+      storage.reviews[reviewDate][habitId] = answer;
+      saveData();
+      renderReview();
+    }
+
+    // Обновление статистики дня
+    function updateDayStats() {
+      const dayReviews = storage.reviews[reviewDate] || {};
+      const total = storage.habits.length;
+      const evaluated = Object.keys(dayReviews).length;
+      const good = Object.values(dayReviews).filter(v => v === 'yes').length;
+      const bad = Object.values(dayReviews).filter(v => v === 'no').length;
+      
+      document.getElementById('totalCount').textContent = total;
+      document.getElementById('goodCount').textContent = good;
+      document.getElementById('badCount').textContent = bad;
+      
+      const score = evaluated > 0 ? Math.round((good / evaluated) * 100) : 0;
+      drawRing(score);
+    }
+
+    // Рисование кольца
+    function drawRing(score) {
+      const canvas = document.getElementById('ringChart');
+      const ctx = canvas.getContext('2d');
+      const centerX = 100;
+      const centerY = 100;
+      const radius = 80;
+      
+      ctx.clearRect(0, 0, 200, 200);
+      
+      // Фон
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#2a3648';
+      ctx.lineWidth = 15;
+      ctx.stroke();
+      
+      // Прогресс
+      if (score > 0) {
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, -0.5 * Math.PI, (-0.5 + (score / 100) * 2) * Math.PI);
+        ctx.strokeStyle = score >= 70 ? '#4ade80' : score >= 40 ? '#fbbf24' : '#f87171';
+        ctx.lineWidth = 15;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+      
+      // Текст
+      ctx.fillStyle = '#e8edf4';
+      ctx.font = 'bold 36px -apple-system';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(score + '%', centerX, centerY);
+    }
+
+    // Рендер статистики
+    function renderStats() {
+      const dates = Object.keys(storage.reviews).sort();
+      document.getElementById('daysCount').textContent = dates.length;
+      
+      const scores = dates.map(date => {
+        const dayReviews = storage.reviews[date];
+        const evaluated = Object.keys(dayReviews).length;
+        if (evaluated === 0) return 0;
+        const good = Object.values(dayReviews).filter(v => v === 'yes').length;
+        return Math.round((good / evaluated) * 100);
+      });
+      
+      const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+      document.getElementById('avgScore').textContent = avgScore + '%';
+      
+      drawWeekChart();
+    }
+
+    // График недели
+    function drawWeekChart() {
+      const canvas = document.getElementById('weekChart');
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+      
+      ctx.clearRect(0, 0, width, height);
+      
+      const dates = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        dates.push(date.toISOString().split('T')[0]);
+      }
+      
+      const scores = dates.map(date => {
+        const dayReviews = storage.reviews[date];
+        if (!dayReviews || Object.keys(dayReviews).length === 0) return 0;
+        const evaluated = Object.keys(dayReviews).length;
+        const good = Object.values(dayReviews).filter(v => v === 'yes').length;
+        return Math.round((good / evaluated) * 100);
+      });
+      
+      const barWidth = width / dates.length;
+      const maxHeight = height - 40;
+      
+      scores.forEach((score, i) => {
+        const barHeight = (score / 100) * maxHeight;
+        const x = i * barWidth + 20;
+        const y = height - barHeight - 20;
+        
+        ctx.fillStyle = score >= 70 ? '#4ade80' : score >= 40 ? '#fbbf24' : '#f87171';
+        ctx.fillRect(x, y, barWidth - 40, barHeight);
+        
+        ctx.fillStyle = '#e8edf4';
+        ctx.font = '12px -apple-system';
+        ctx.textAlign = 'center';
+        ctx.fillText(score + '%', x + (barWidth - 40) / 2, y - 5);
+      });
+    }
+
+    // Рендер настроек
+    function renderSettings() {
+      const list = document.getElementById('habitList');
+      if (storage.habits.length === 0) {
+        list.innerHTML = '<div class="empty">Нет привычек. Добавьте первую!</div>';
+        return;
+      }
+      list.innerHTML = storage.habits.map(h => `
+        <div class="habit-item">
+          <span class="habit-name">${h.name}</span>
+          <span class="habit-type ${h.type === 'good' ? 'type-good' : 'type-bad'}">
+            ${h.type === 'good' ? 'Хорошая' : 'Плохая'}
+          </span>
+          <button class="btn-delete" onclick="deleteHabit(${h.id})">Удалить</button>
+        </div>
+      `).join('');
+    }
+
+    // Добавление привычки
+    function addHabit() {
+      const name = document.getElementById('habitName').value.trim();
+      const type = document.getElementById('habitType').value;
+      
+      if (!name) {
+        alert('Введите название привычки');
+        return;
+      }
+      
+      storage.habits.push({
+        id: Date.now(),
+        name: name,
+        type: type
+      });
+      
+      saveData();
+      document.getElementById('habitName').value = '';
+      renderSettings();
+    }
+
+    // Удаление привычки
+    function deleteHabit(id) {
+      if (!confirm('Удалить привычку?')) return;
+      storage.habits = storage.habits.filter(h => h.id !== id);
+      saveData();
+      renderSettings();
+    }
+
+    // Экспорт
+    function exportData() {
+      const data = JSON.stringify(storage, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'habits-backup.json';
+      a.click();
+    }
+
+    // Импорт
+    function importData() {
+      document.getElementById('importFile').click();
+    }
+
+    function handleImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          storage.habits = data.habits || [];
+          storage.reviews = data.reviews || {};
+          saveData();
+          alert('Данные импортированы!');
+          renderSettings();
+        } catch (err) {
+          alert('Ошибка при импорте данных');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Инициализация
+    loadData();
+    renderReview();
+  </script>
+</body>
+</html>
